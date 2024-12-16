@@ -1,34 +1,58 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [messages, setMessages] = useState(["hi there", "hello"]);
+  const wsRef = useRef();
+  const inputRef = useRef();
+
+  useEffect(() => {
+    const ws = new WebSocket("http://localhost:8080");
+    ws.onmessage = (event) => {
+      setMessages(m => [...m, event.data])
+    }
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        type: "join",
+        payload: {
+          roomId: "red"
+        }
+      }))
+    }
+    return () => {
+      ws.close()
+    }
+  }, []);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className='h-screen bg-black'>
+      <br /><br /><br />
+      <div className='h-[85vh]'>
+        {messages.map(message => <div className='m-8'> 
+          <span className='bg-white text-black rounded p-4 '>            
+            {message} 
+          </span>
+        </div>)}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+      <div className='w-full bg-white flex'>
+        <input ref={inputRef} id="message" className="flex-1 p-4"></input>
+        <button onClick={() => {
+          const message = inputRef.current?.value;
+          wsRef.current.send(JSON.stringify({
+            type: "chat",
+            payload: {
+              message: message
+            }
+          }))
+
+        }} className='bg-purple-600 text-white p-4'>
+          Send message
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div>
   )
 }
 
